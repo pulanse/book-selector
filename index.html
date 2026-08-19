@@ -1660,6 +1660,23 @@
       currentClc = clc;
       searchTerm = term;
     };
+
+    // 暴露给 HTML 内联 onclick 调用的全局函数（appMain 包函数后需显式挂载，否则点击报 not defined）
+    window.clearAll = clearAll;
+    window.closeImportModal = closeImportModal;
+    window.closeModal = closeModal;
+    window.copyText = copyText;
+    window.exportExcel = exportExcel;
+    window.exportSelection = exportSelection;
+    window.loadMore = loadMore;
+    window.openImportModal = openImportModal;
+    window.parseAndImport = parseAndImport;
+    window.setSort = setSort;
+    window.switchCategory = switchCategory;
+    window.switchClc = switchClc;
+    window.toggleBook = toggleBook;
+    window.toggleCategory = toggleCategory;
+    window.toggleSortMenu = toggleSortMenu;
     } // ===== end appMain =====
 
     // ===== 启动：数据加载完成后初始化 =====
