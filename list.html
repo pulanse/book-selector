@@ -34,6 +34,24 @@
       margin: 0 auto;
     }
     .header-left { text-align: left; min-width: 0; }
+    .home-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 14px;
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.2s;
+      user-select: none;
+    }
+    .home-btn:active { background: rgba(255,255,255,0.32); }
     .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
     .header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
     .version-badge {
@@ -717,6 +735,7 @@
       .header h1 { font-size: 18px; }
       .header .subtitle { font-size: 11px; }
       .version-badge { padding: 1px 7px; font-size: 10px; }
+      .home-btn { padding: 4px 10px; font-size: 12px; border-radius: 15px; }
 
       .customer-info { flex-direction: column; gap: 6px; padding: 10px 12px; }
       .customer-info input { padding: 8px 12px; font-size: 13px; }
@@ -774,6 +793,7 @@
         <h1>📚 选书助手<span class="version-badge" id="versionBadge">书单 20260812</span></h1>
         <div class="subtitle" id="headerSub">浏览书单 · 点选好书 · 一键生成清单</div>
       </div>
+      <a href="index.html" class="home-btn">🏠 回到首页</a>
     </div>
   </div>
 
