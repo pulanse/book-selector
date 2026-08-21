@@ -710,6 +710,29 @@
       border-bottom: 1px solid #a5d6a7;
     }
 
+    /* ===== 汇总看板 ===== */
+    .summary-panel { background: #fff; border-bottom: 1px solid #f0f0f5; }
+    .summary-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; cursor: pointer; user-select: none;
+    }
+    .summary-title { font-size: 15px; font-weight: 600; color: #333; }
+    .summary-title em { color: #667eea; font-style: normal; font-weight: 700; margin: 0 2px; }
+    .summary-toggle { font-size: 12px; color: #999; }
+    .summary-body { padding: 0 16px 14px; }
+    .summary-section { margin-bottom: 12px; }
+    .summary-section:last-child { margin-bottom: 0; }
+    .summary-label { font-size: 12px; color: #999; margin-bottom: 8px; font-weight: 600; }
+    .summary-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .summary-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px; border-radius: 16px;
+      background: #f5f5f7; font-size: 13px; color: #555;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .summary-tag:hover { background: #eef2ff; color: #667eea; }
+    .summary-tag em { font-style: normal; font-weight: 700; color: #667eea; }
+
     /* ===== 加载遮罩动画 ===== */
     @keyframes spin { to { transform: rotate(360deg); } }
     #loadingOverlay {
@@ -756,6 +779,24 @@
   <!-- Tip -->
   <div class="tip-banner" id="tipBanner">
     💡 点击书籍卡片即可选书，选完后点击「生成清单」复制发给客服
+  </div>
+
+  <!-- 汇总看板 -->
+  <div class="summary-panel" id="summaryPanel">
+    <div class="summary-header" onclick="toggleSummary()">
+      <span class="summary-title">📊 书单汇总 · 共 <em id="summaryTotal">0</em> 本</span>
+      <span class="summary-toggle" id="summaryToggle">收起 ▴</span>
+    </div>
+    <div class="summary-body" id="summaryBody">
+      <div class="summary-section">
+        <div class="summary-label">书籍类型</div>
+        <div class="summary-tags" id="summaryTypeTags"></div>
+      </div>
+      <div class="summary-section">
+        <div class="summary-label">中图法分类</div>
+        <div class="summary-tags" id="summaryClcTags"></div>
+      </div>
+    </div>
   </div>
 
   <div class="layout">
@@ -1303,6 +1344,52 @@
       }
     }
 
+    // ===== 汇总看板初始化 =====
+    function initSummary() {
+      var typeEl = document.getElementById('summaryTypeTags');
+      var clcEl = document.getElementById('summaryClcTags');
+      var totalAll = 0;
+      typeEl.innerHTML = '';
+      bookData.forEach(function (cat, idx) {
+        var n = cat.books.length;
+        totalAll += n;
+        var t = document.createElement('span');
+        t.className = 'summary-tag';
+        t.innerHTML = cat.category + ' <em>' + n + '</em>';
+        t.onclick = function () { switchCategory(idx); };
+        typeEl.appendChild(t);
+      });
+      document.getElementById('summaryTotal').textContent = totalAll;
+
+      var clcMap = {};
+      bookData.forEach(function (cat) {
+        cat.books.forEach(function (b) {
+          var k = b.clcLetter || '其他';
+          clcMap[k] = (clcMap[k] || 0) + 1;
+        });
+      });
+      clcEl.innerHTML = '';
+      Object.keys(clcMap).sort(function (a, b) { return a.localeCompare(b); }).forEach(function (letter) {
+        var name = (CLC_NAMES[letter] || '').replace(/^[A-Z]\./, '');
+        var t = document.createElement('span');
+        t.className = 'summary-tag';
+        t.innerHTML = letter + ' ' + name + ' <em>' + clcMap[letter] + '</em>';
+        t.onclick = function () { switchClc(letter); };
+        clcEl.appendChild(t);
+      });
+    }
+    function toggleSummary() {
+      var body = document.getElementById('summaryBody');
+      var toggle = document.getElementById('summaryToggle');
+      if (body.style.display === 'none') {
+        body.style.display = '';
+        toggle.textContent = '收起 ▴';
+      } else {
+        body.style.display = 'none';
+        toggle.textContent = '展开 ▾';
+      }
+    }
+
     // ===== 清空所有选择 =====
     function clearAll() {
       selectedBooks.clear();
@@ -1653,6 +1740,7 @@
       renderClcSidebar();
       renderBooks();
       updateBottomBar();
+      initSummary();
     }
 
     // 测试用辅助：允许外部脚本修改筛选状态（不影响正常用户）
@@ -1678,6 +1766,7 @@
     window.toggleBook = toggleBook;
     window.toggleCategory = toggleCategory;
     window.toggleSortMenu = toggleSortMenu;
+    window.toggleSummary = toggleSummary;
     } // ===== end appMain =====
 
     // ===== 启动：数据加载完成后初始化 =====
