@@ -257,7 +257,11 @@
       });
       const clcGrid = document.getElementById('clcGrid');
       clcGrid.innerHTML = '';
-      Object.keys(clcMap).sort((a, b) => a.localeCompare(b)).forEach(letter => {
+      Object.keys(clcMap).sort((a, b) => {
+        if (a === '其他') return 1;
+        if (b === '其他') return -1;
+        return a.localeCompare(b);
+      }).forEach(letter => {
         const name = (CLC_NAMES[letter] || '').replace(/^[A-Z]\.\s*/, '') || '其他';
         const n = clcMap[letter];
         const card = document.createElement('a');
