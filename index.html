@@ -1269,13 +1269,14 @@
 
     // ===== 更新底部栏 =====
     function updateBottomBar() {
-      const count = selectedBooks.size;
+      let count = 0;
       let totalPrice = 0;
       let totalCost = 0;
 
       selectedBooks.forEach(isbn => {
         const b = bookByIsbn.get(isbn);
         if (!b) return;
+        count += b.setCount || 1;
         totalPrice += wholesale(b);
         totalCost += b.cost || 0;
       });
