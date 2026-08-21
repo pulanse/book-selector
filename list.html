@@ -210,6 +210,13 @@
     }
 
     /* ===== Tabs ===== */
+    .filter-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 99;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
     .tabs {
       display: flex;
       gap: 8px;
@@ -831,11 +838,14 @@
         <input type="text" id="searchInput" placeholder="搜索书名 / 作者 / ISBN / 出版社 / ISBN分类...">
       </div>
 
-      <!-- Tabs：学段分类 -->
-      <div class="tabs" id="tabs"></div>
+      <!-- 滚动固定：学段分类 + ISBN分类 -->
+      <div class="filter-sticky" id="filterSticky">
+        <!-- Tabs：学段分类 -->
+        <div class="tabs" id="tabs"></div>
 
-      <!-- Tabs：ISBN分类（手机端显示为第二行） -->
-      <div class="tabs tabs-clc" id="clcTabs"></div>
+        <!-- Tabs：ISBN分类（手机端显示为第二行） -->
+        <div class="tabs tabs-clc" id="clcTabs"></div>
+      </div>
 
       <!-- Book List -->
       <div class="book-list" id="bookList"></div>
@@ -1721,6 +1731,17 @@
       renderBooks();
       updateBottomBar();
     }
+
+    // 滚动固定：学段分类 + ISBN分类 标签行紧随 header
+    function updateFilterStickyTop() {
+      const header = document.querySelector('.header');
+      const sticky = document.getElementById('filterSticky');
+      if (header && sticky) {
+        sticky.style.top = header.offsetHeight + 'px';
+      }
+    }
+    updateFilterStickyTop();
+    window.addEventListener('resize', updateFilterStickyTop);
 
     // 测试用辅助：允许外部脚本修改筛选状态（不影响正常用户）
     window.setTestFilters = function(cat, clc, term) {
