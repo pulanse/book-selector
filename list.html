@@ -409,47 +409,6 @@
       justify-content: flex-end;
     }
 
-    /* ===== 价格筛选 ===== */
-    .price-filter {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-    .price-label {
-      font-size: 12px;
-      color: #555;
-      background: #f5f5f7;
-      border: 1px solid #e0e0e2;
-      padding: 5px 8px;
-      border-radius: 8px;
-      white-space: nowrap;
-      user-select: none;
-    }
-    .price-inputs {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .price-input {
-      width: 56px;
-      padding: 5px 6px;
-      border: 1px solid #e0e0e2;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #333;
-      outline: none;
-      background: white;
-      transition: border-color 0.2s;
-    }
-    .price-input:focus { border-color: #667eea; }
-    .price-input::placeholder { color: #ccc; }
-    .price-sep {
-      color: #ccc;
-      font-size: 12px;
-      user-select: none;
-    }
-
     .book-card {
       background: white;
       border-radius: 12px;
@@ -1034,10 +993,8 @@
     let currentClc = 'all';            // 'all' 或中图法大类字母
     let searchTerm = '';
     let sortMode = 'default';          // default | priceDesc | priceAsc
-    let priceMin = '';                 // 最低批发价
-    let priceMax = '';                 // 最高批发价
     let currentPage = 1;               // 当前页码
-    const PAGE_SIZE = 50;              // 每页显示本数
+    const PAGE_SIZE = 20;              // 每页显示本数
 
     const SORT_LABELS = {
       default: '排序',
@@ -1102,9 +1059,6 @@
         cat.books.forEach(book => {
           if (currentClc !== 'all' && currentClc !== book.clcLetter) return;
           if (!matchSearch(book)) return;
-          const wp = wholesale(book);
-          if (priceMin !== '' && wp < parseFloat(priceMin)) return;
-          if (priceMax !== '' && wp > parseFloat(priceMax)) return;
           result.push({ cat, catIdx, book });
         });
       });
@@ -1193,34 +1147,6 @@
       renderClcTabs();
       renderClcSidebar();
       renderSortBar();
-      renderBooks();
-    }
-
-    // ===== 价格筛选 =====
-    function priceFilterHtml() {
-      return `
-        <div class="price-filter">
-          <span class="price-label">价格</span>
-          <div class="price-inputs">
-            <input type="number" class="price-input" placeholder="¥" min="0" step="0.01" value="${priceMin}" onchange="setPriceMin(this.value)">
-            <span class="price-sep">—</span>
-            <input type="number" class="price-input" placeholder="¥" min="0" step="0.01" value="${priceMax}" onchange="setPriceMax(this.value)">
-          </div>
-        </div>
-      `;
-    }
-
-    function setPriceMin(v) {
-      const val = v === '' ? '' : v;
-      priceMin = val;
-      currentPage = 1;
-      renderBooks();
-    }
-
-    function setPriceMax(v) {
-      const val = v === '' ? '' : v;
-      priceMax = val;
-      currentPage = 1;
       renderBooks();
     }
 
@@ -1320,7 +1246,6 @@
         html += `<div class="category-header">`;
         html += `<div class="category-title">${cat.category}<span class="count">${cat.books.length}本</span></div>`;
         html += `<div class="header-controls">`;
-        html += priceFilterHtml();
         html += `<div class="select-all-btn" onclick="toggleCategory(${catIdx})">${allSelected && !searchTerm ? '取消全选' : '全选'}</div>`;
         html += `</div>`;
         html += `</div>`;
