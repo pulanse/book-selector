@@ -68,7 +68,7 @@
       white-space: nowrap;
     }
 
-    /* ===== Sort Dropdown（分类头部用） ===== */
+    /* ===== Sort Dropdown（固定工具栏用） ===== */
     .sort-dropdown {
       position: relative;
       flex-shrink: 0;
@@ -217,6 +217,23 @@
       background: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+    .filter-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: white;
+    }
+    .filter-hint {
+      font-size: 12px;
+      color: #888;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
     .tabs {
       display: flex;
       gap: 8px;
@@ -228,7 +245,10 @@
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
-      padding: 7px 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 14px;
       border: 1.5px solid #e0e0e0;
       border-radius: 20px;
       font-size: 13px;
@@ -239,6 +259,7 @@
       transition: all 0.2s;
       user-select: none;
     }
+    .tab .tab-icon { font-size: 14px; line-height: 1; }
     .tab.active {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -540,20 +561,40 @@
       margin-bottom: 2px;
     }
 
-    /* ===== Load More ===== */
-    .load-more-wrap { text-align: center; padding: 6px 0 20px; }
-    .load-more-btn {
-      display: inline-block;
-      padding: 10px 30px;
+    /* ===== Pagination ===== */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 16px 80px;
+      background: #f5f5f7;
+    }
+    .page-btn {
+      padding: 8px 16px;
       border: 1.5px solid #667eea;
-      color: #667eea;
-      border-radius: 22px;
-      font-size: 13px;
       background: white;
+      color: #667eea;
+      border-radius: 20px;
+      font-size: 14px;
       cursor: pointer;
       user-select: none;
+      transition: all 0.15s;
     }
-    .load-more-btn:active { background: #f0f0ff; }
+    .page-btn:hover:not(:disabled) { background: #667eea; color: white; }
+    .page-btn:active:not(:disabled) { background: #5a6fd6; }
+    .page-btn:disabled {
+      border-color: #d0d0d0;
+      color: #bbb;
+      background: #f5f5f7;
+      cursor: not-allowed;
+    }
+    .page-info {
+      font-size: 13px;
+      color: #666;
+      padding: 0 6px;
+    }
 
     /* ===== Bottom Bar ===== */
     .bottom-bar {
@@ -838,13 +879,19 @@
         <input type="text" id="searchInput" placeholder="搜索书名 / 作者 / ISBN / 出版社 / ISBN分类...">
       </div>
 
-      <!-- 滚动固定：学段分类 + ISBN分类 -->
+      <!-- 滚动固定：学段分类 + ISBN分类 + 排序 -->
       <div class="filter-sticky" id="filterSticky">
         <!-- Tabs：学段分类 -->
         <div class="tabs" id="tabs"></div>
 
         <!-- Tabs：ISBN分类（手机端显示为第二行） -->
         <div class="tabs tabs-clc" id="clcTabs"></div>
+
+        <!-- 排序 + 筛选提示（固定） -->
+        <div class="filter-toolbar" id="filterToolbar">
+          <div class="filter-hint" id="filterHint"></div>
+          <div id="sortBar"></div>
+        </div>
       </div>
 
       <!-- Book List -->
@@ -978,6 +1025,9 @@
 
     const CLC_GROUPS = window.CLC_GROUPS = buildClcIndex();
 
+    // ===== 分类图标 =====
+    const TYPE_EMOJI = { '全部': '🗂️', '幼儿': '👶', '小学': '🎒', '中学': '📖', '成人': '📚', '教师用书': '👩‍🏫', '其他': '📦' };
+
     // ===== 状态管理 =====
     const selectedBooks = new Set();   // 存 ISBN
     let currentCategory = 'all';       // 'all' 或学段分类索引
@@ -986,11 +1036,11 @@
     let sortMode = 'default';          // default | priceDesc | priceAsc
     let priceMin = '';                 // 最低批发价
     let priceMax = '';                 // 最高批发价
-    let renderLimit = 200;             // 单次渲染上限（大数据量分批渲染）
-    const RENDER_STEP = 200;
+    let currentPage = 1;               // 当前页码
+    const PAGE_SIZE = 50;              // 每页显示本数
 
     const SORT_LABELS = {
-      default: '默认排序',
+      default: '排序',
       priceDesc: '批发价从高到低',
       priceAsc: '批发价从低到高'
     };
@@ -1072,12 +1122,14 @@
     // ===== 渲染学段分类标签 =====
     function renderTabs() {
       const tabsEl = document.getElementById('tabs');
-      let html = `<div class="tab ${currentCategory === 'all' ? 'active' : ''}" onclick="switchCategory('all')">全部</div>`;
+      const allIcon = TYPE_EMOJI['全部'] || '🗂️';
+      let html = `<div class="tab ${currentCategory === 'all' ? 'active' : ''}" onclick="switchCategory('all')"><span class="tab-icon">${allIcon}</span>全部</div>`;
       bookData.forEach((cat, idx) => {
         let selectedInCat = 0;
         cat.books.forEach(b => { if (selectedBooks.has(b.isbn)) selectedInCat++; });
         const badge = selectedInCat > 0 ? `<span class="badge">${selectedInCat}</span>` : '';
-        html += `<div class="tab ${currentCategory === idx ? 'active' : ''}" onclick="switchCategory(${idx})">${cat.category}${badge}</div>`;
+        const icon = TYPE_EMOJI[cat.category] || '📦';
+        html += `<div class="tab ${currentCategory === idx ? 'active' : ''}" onclick="switchCategory(${idx})"><span class="tab-icon">${icon}</span>${cat.category}${badge}</div>`;
       });
       tabsEl.innerHTML = html;
     }
@@ -1111,6 +1163,23 @@
         `<span class="tab-label">📚 ISBN分类</span>` + clcOptionsHtml('tab');
     }
 
+    function updateFilterHint(totalMatched) {
+      const hint = document.getElementById('filterHint');
+      if (!hint) return;
+      if (totalMatched === 0) {
+        hint.textContent = '';
+        return;
+      }
+      const catName = currentCategory === 'all' ? '全部' : (bookData[currentCategory] && bookData[currentCategory].category) || '';
+      const clcName = currentClc === 'all' ? '' : (CLC_GROUPS.find(g => g.letter === currentClc) || {}).name || currentClc;
+      const parts = [];
+      if (catName && currentCategory !== 'all') parts.push(catName);
+      if (clcName) parts.push(clcName);
+      if (searchTerm) parts.push(`搜索“${searchTerm}”`);
+      const prefix = parts.length ? parts.join(' · ') + ' · ' : '';
+      hint.textContent = `${prefix}共 ${totalMatched.toLocaleString()} 本`;
+    }
+
     // 桌面端：左侧边栏 ISBN分类列表
     function renderClcSidebar() {
       document.getElementById('clcSidebarList').innerHTML = clcOptionsHtml('clc-item');
@@ -1119,10 +1188,11 @@
     // ===== 切换 ISBN分类 =====
     function switchClc(letter) {
       currentClc = letter;
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
     }
 
@@ -1143,14 +1213,14 @@
     function setPriceMin(v) {
       const val = v === '' ? '' : v;
       priceMin = val;
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
       renderBooks();
     }
 
     function setPriceMax(v) {
       const val = v === '' ? '' : v;
       priceMax = val;
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
       renderBooks();
     }
 
@@ -1159,7 +1229,7 @@
       return `
         <div class="sort-dropdown">
           <div class="sort-trigger" onclick="toggleSortMenu(event)">
-            <span class="sort-label">${SORT_LABELS[sortMode] || '默认排序'}</span>
+            <span class="sort-label">${SORT_LABELS[sortMode] || '排序'}</span>
             <span class="arrow"></span>
           </div>
           <div class="sort-menu">
@@ -1169,6 +1239,11 @@
           </div>
         </div>
       `;
+    }
+
+    function renderSortBar() {
+      const bar = document.getElementById('sortBar');
+      if (bar) bar.innerHTML = sortDropdownHtml();
     }
 
     function toggleSortMenu(event) {
@@ -1188,7 +1263,8 @@
       event && event.stopPropagation();
       sortMode = mode;
       closeSortMenu();
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
+      renderSortBar();
       renderBooks();
     }
 
@@ -1197,7 +1273,7 @@
       if (!e.target.closest('.sort-dropdown')) closeSortMenu();
     });
 
-    // ===== 渲染书籍列表（分批） =====
+    // ===== 渲染书籍列表（分页） =====
     function renderBooks() {
       const listEl = document.getElementById('bookList');
       const filtered = getFilteredBooks();
@@ -1208,7 +1284,11 @@
         return;
       }
 
-      const visible = filtered.slice(0, renderLimit);
+      const totalPages = Math.ceil(totalMatched / PAGE_SIZE) || 1;
+      currentPage = Math.max(1, Math.min(currentPage, totalPages));
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const visible = filtered.slice(start, end);
       let html = '';
 
       // ISBN分类筛选提示条
@@ -1219,8 +1299,8 @@
       }
 
       // 搜索结果提示
-      if (searchTerm && totalMatched > visible.length) {
-        html += `<div class="tip-banner">🔍 共匹配 ${totalMatched} 本，已显示前 ${visible.length} 本，请输入更精确的关键词（书名 / ISBN）</div>`;
+      if (searchTerm && totalMatched > PAGE_SIZE) {
+        html += `<div class="tip-banner">🔍 共匹配 ${totalMatched} 本，每页 ${PAGE_SIZE} 本，当前第 ${currentPage} / ${totalPages} 页</div>`;
       }
 
       // 按分类分组渲染
@@ -1241,7 +1321,6 @@
         html += `<div class="category-title">${cat.category}<span class="count">${cat.books.length}本</span></div>`;
         html += `<div class="header-controls">`;
         html += priceFilterHtml();
-        html += sortDropdownHtml();
         html += `<div class="select-all-btn" onclick="toggleCategory(${catIdx})">${allSelected && !searchTerm ? '取消全选' : '全选'}</div>`;
         html += `</div>`;
         html += `</div>`;
@@ -1286,24 +1365,42 @@
         html += `</div>`;
       });
 
-      // 加载更多
-      if (totalMatched > visible.length) {
-        html += `<div class="load-more-wrap"><span class="load-more-btn" onclick="loadMore()">加载更多（已显示 ${visible.length} / ${totalMatched}）</span></div>`;
+      // 分页控件
+      if (totalPages > 1) {
+        html += `
+          <div class="pagination">
+            <button class="page-btn" onclick="goPage(1)" ${currentPage === 1 ? 'disabled' : ''}>首页</button>
+            <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&lt; 上一页</button>
+            <span class="page-info">第 ${currentPage} / ${totalPages} 页（${start + 1}-${Math.min(end, totalMatched)} / ${totalMatched} 本）</span>
+            <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>下一页 &gt;</button>
+          </div>
+        `;
       }
 
       listEl.innerHTML = html;
+      updateFilterHint(totalMatched);
     }
 
-    function loadMore() {
-      renderLimit += RENDER_STEP;
+    function goPage(page) {
+      const filtered = getFilteredBooks();
+      const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
       renderBooks();
+      // 切换页码后滚动到列表顶部（filter-sticky 下方），避免跳回最上面
+      const sticky = document.getElementById('filterSticky');
+      if (sticky) {
+        const top = sticky.offsetTop + sticky.offsetHeight;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
     }
 
     // ===== 切换学段分类 =====
     function switchCategory(cat) {
       currentCategory = cat;
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
       renderTabs();
+      renderSortBar();
       renderBooks();
     }
 
@@ -1317,6 +1414,7 @@
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
       updateBottomBar();
     }
@@ -1336,6 +1434,7 @@
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
       updateBottomBar();
       showToast(allSelected ? '已取消全选' : `已选 ${visibleBooks.length} 本`);
@@ -1383,6 +1482,7 @@
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
       updateBottomBar();
       showToast('已清空所有选择');
@@ -1651,6 +1751,7 @@
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
       updateBottomBar();
 
@@ -1689,10 +1790,11 @@
     let searchTimer = null;
     document.getElementById('searchInput').addEventListener('input', function(e) {
       searchTerm = e.target.value.trim();
-      renderLimit = RENDER_STEP;
+      currentPage = 1;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         renderTabs();
+        renderSortBar();
         renderBooks();
       }, 150);
     });
@@ -1725,6 +1827,7 @@
       renderTabs();
       renderClcTabs();
       renderClcSidebar();
+      renderSortBar();
       renderBooks();
       updateBottomBar();
     }
@@ -1754,7 +1857,7 @@
     window.copyText = copyText;
     window.exportExcel = exportExcel;
     window.exportSelection = exportSelection;
-    window.loadMore = loadMore;
+    window.goPage = goPage;
     window.openImportModal = openImportModal;
     window.parseAndImport = parseAndImport;
     window.setSort = setSort;
